@@ -1,0 +1,14 @@
+{
+  "layer": "raw",
+  "source_system": "fao_food_price_index",
+  "source_landing_url": "https://www.fao.org/worldfoodsituation/foodpricesindex/en/",
+  "ingested_at_utc": "2026-03-28T00:41:16.261369+00:00",
+  "row_count": 2604,
+  "partition_ingested_at": "ingested_at=2026-03-27",
+  "partition_run_id": "run_id=20260327_214115",
+  "files": {
+    "csv": "records.csv",
+    "json": "records.json",
+    "parquet": "records.parquet"
+  }
+}

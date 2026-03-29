@@ -14,7 +14,8 @@ from bs4 import BeautifulSoup
 
 SOURCE_NAME = "fao_food_price_index"
 SOURCE_URL = "https://www.fao.org/worldfoodsituation/foodpricesindex/en/"
-RAW_OUTPUT_DIR = Path("data/raw/commodities")
+RAW_LAYER_BASE = Path("data/raw")
+RAW_DATASET_DIR = RAW_LAYER_BASE / "fao" / "food_price_index"
 DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
@@ -124,15 +125,49 @@ def transform_raw_records(raw_items: list[dict[str, Any]]) -> list[CommodityReco
     return records
 
 
-def save_raw(records: list[CommodityRecord], output_dir: Path = RAW_OUTPUT_DIR) -> tuple[Path, Path]:
-    output_dir.mkdir(parents=True, exist_ok=True)
+def build_raw_run_dir(stamp: str | None = None) -> Path:
+    """Um run por ingestao: camada raw particionada por data de coleta (YYYY-MM-DD) + id."""
+    if stamp is None:
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    day = datetime.now().strftime("%Y-%m-%d")
+    return RAW_DATASET_DIR / f"ingested_at={day}" / f"run_id={stamp}"
 
+
+def save_raw(
+    records: list[CommodityRecord],
+    output_dir: Path | None = None,
+) -> tuple[Path, Path, Path, Path]:
+    """Grava CSV, JSON, Parquet e manifest na pasta do run (camada raw)."""
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = output_dir / f"commodities_raw_{stamp}.csv"
-    json_path = output_dir / f"commodities_raw_{stamp}.json"
+    run_dir = output_dir or build_raw_run_dir(stamp)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = run_dir / "records.csv"
+    json_path = run_dir / "records.json"
+    parquet_path = run_dir / "records.parquet"
+    manifest_path = run_dir / "_manifest.json"
 
     data_dicts = [asdict(record) for record in records]
-    pd.DataFrame(data_dicts).to_csv(csv_path, index=False, encoding="utf-8")
+    frame = pd.DataFrame(data_dicts)
+    frame.to_csv(csv_path, index=False, encoding="utf-8")
     json_path.write_text(json.dumps(data_dicts, ensure_ascii=False, indent=2), encoding="utf-8")
+    frame.to_parquet(parquet_path, index=False)
 
-    return csv_path, json_path
+    batch_ingested_at = datetime.now(timezone.utc).isoformat()
+    manifest = {
+        "layer": "raw",
+        "source_system": SOURCE_NAME,
+        "source_landing_url": SOURCE_URL,
+        "ingested_at_utc": batch_ingested_at,
+        "row_count": len(records),
+        "partition_ingested_at": run_dir.parent.name,
+        "partition_run_id": run_dir.name,
+        "files": {
+            "csv": csv_path.name,
+            "json": json_path.name,
+            "parquet": parquet_path.name,
+        },
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return csv_path, json_path, parquet_path, manifest_path
