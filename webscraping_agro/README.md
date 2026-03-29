@@ -27,6 +27,7 @@ webscraping_agro/
   sql/
   src/
     scraping/
+    etl/
   tests/
   requirements.txt
   .env.example
@@ -70,6 +71,8 @@ Arquivos em `sql/` (rodar nesta ordem):
 1. `ddl.sql` — schema `processed`, dimensoes e fato mensal.
 2. `seed_reference.sql` — regioes de referencia (inclui `GLOBAL` para FAO).
 3. `seed_commodities.sql` — categorias do indice FAO.
+4. `queries.sql` — consultas da questao 6 (LAG, top 5, anomalias).
+5. `index_optimization.sql` — plano de performance e indices da questao 7.
 
 Exemplo com `psql`:
 
@@ -77,9 +80,28 @@ Exemplo com `psql`:
 psql -h localhost -U postgres -d agro -f sql/ddl.sql
 psql -h localhost -U postgres -d agro -f sql/seed_reference.sql
 psql -h localhost -U postgres -d agro -f sql/seed_commodities.sql
+psql -h localhost -U postgres -d agro -f sql/queries.sql
+psql -h localhost -U postgres -d agro -f sql/index_optimization.sql
 ```
 
 (Ajuste host, usuario e nome do banco conforme seu `.env`.)
+
+### Executar ETL (raw -> processed em arquivo)
+
+```powershell
+python -m src.etl.run_etl
+```
+
+Saidas:
+
+- `data/processed/fao/food_price_index/ingested_at=.../run_id=.../prices_processed.csv`
+- `data/processed/fao/food_price_index/ingested_at=.../run_id=.../prices_processed.parquet`
+
+### Executar ETL + carga no PostgreSQL
+
+```powershell
+python -m src.etl.run_etl --load-postgres
+```
 
 ## 4) Passo 2 — Camada Raw (organizacao local)
 
@@ -131,9 +153,7 @@ Boas praticas: prefixos `raw/`, `processed/`, `curated/` separados; particoes pr
 
 ## 6) Proximos passos (Dia 2+)
 
-- Modelagem SQL no PostgreSQL (`commodities`, `regions`, `prices`).
-- ETL para corrigir tipos, nulos e padronizacao de categorias.
-- Carga em camada `processed`.
-- Consultas analiticas e dashboard Streamlit.
-
-Pastas `src/etl`, `src/db` e `src/app` serao criadas quando essas etapas existirem no codigo (evita pacotes vazios no repositorio).
+- Validar carga PostgreSQL em ambiente local com evidencias (prints SQL).
+- Construir dashboard Streamlit com filtros (produto, regiao e periodo).
+- Analise exploratoria em Pandas e deteccao de outliers.
+- Documentar insights de negocio, limitacoes da fonte e a proposta de uso no agro.
