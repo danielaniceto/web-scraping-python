@@ -25,9 +25,11 @@ webscraping_agro/
   docs/
     images/
   sql/
+  streamlit_app.py
   src/
     scraping/
     etl/
+    analysis/
   tests/
   requirements.txt
   .env.example
@@ -103,6 +105,16 @@ Saidas:
 python -m src.etl.run_etl --load-postgres
 ```
 
+### Dashboard Streamlit (visualizacao + EDA)
+
+Requer `prices_processed.parquet` na camada processed (rode o ETL antes). Na pasta `webscraping_agro`:
+
+```powershell
+streamlit run streamlit_app.py
+```
+
+A aplicacao carrega o Parquet **mais recente** por padrao. Ha duas abas: **Dashboard** (linhas, barras, boxplot interativos com Plotly) e **Analise exploratoria** (estatisticas descritivas, outliers IQR, graficos Matplotlib).
+
 ## 4) Passo 2 — Camada Raw (organizacao local)
 
 ### 4.1 Convencao de diretorios
@@ -149,11 +161,12 @@ Boas praticas: prefixos `raw/`, `processed/`, `curated/` separados; particoes pr
 
 - Coleta FAO com descoberta do CSV na pagina e parse do arquivo com linhas de metadados.
 - Camada raw particionada por `ingested_at` e `run_id`, com CSV, JSON, Parquet e manifest.
-- Testes unitarios na transformacao dos registros.
+- Testes unitarios na transformacao dos registros, ETL e funcoes de EDA (IQR).
+- Dashboard Streamlit (`streamlit_app.py`): filtros por produto, regiao e periodo; graficos interativos e aba de EDA (Pandas/Matplotlib).
 
 ## 6) Proximos passos (Dia 2+)
 
 - Validar carga PostgreSQL em ambiente local com evidencias (prints SQL).
-- Construir dashboard Streamlit com filtros (produto, regiao e periodo).
-- Analise exploratoria em Pandas e deteccao de outliers.
+- Incluir no GitHub prints das consultas SQL e do Streamlit (requisito da avaliacao).
 - Documentar insights de negocio, limitacoes da fonte e a proposta de uso no agro.
+- (Opcional) Popular camada `curated` com agregados prontos para consumo externo.
